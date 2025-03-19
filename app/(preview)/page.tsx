@@ -7,6 +7,7 @@ import { useScrollToBottom } from "@/components/use-scroll-to-bottom";
 import { motion, AnimatePresence } from "framer-motion";
 import { MasonryIcon, VercelIcon } from "@/components/icons";
 import Link from "next/link";
+import dynamic from 'next/dynamic';
 
 // Importar GSAP de manera dinámica para evitar problemas con SSR
 let gsap: any;
@@ -22,6 +23,7 @@ export default function Home() {
   const [input, setInput] = useState<string>("");
   const [messages, setMessages] = useState<Array<ReactNode>>([]);
   const [isInitial, setIsInitial] = useState(true);
+  const [gsapLoaded, setGsapLoaded] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [messagesContainerRef, messagesEndRef] =
@@ -29,23 +31,17 @@ export default function Home() {
   const cursorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const suggestedActions = [
-    { title: "View all", label: "my cameras", action: "View all my cameras" },
-    { title: "Show me", label: "my smart home hub", action: "Show me my smart home hub" },
-    {
-      title: "How much",
-      label: "electricity have I used this month?",
-      action: "Show electricity usage",
-    },
-    {
-      title: "How much",
-      label: "water have I used this month?",
-      action: "Show water usage",
-    },
-  ];
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('gsap').then((module) => {
+        gsap = module.default;
+        setGsapLoaded(true);
+      });
+    }
+  }, []);
 
   useEffect(() => {
-    if (!gsap) return;
+    if (!gsapLoaded || !gsap) return;
 
     // Efecto de brillo del cursor
     const handleMouseMove = (e: MouseEvent) => {
@@ -77,11 +73,11 @@ export default function Home() {
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
     };
-  }, []);
+  }, [gsapLoaded]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputRef.current?.value || !gsap) return;
+    if (!inputRef.current?.value || !gsapLoaded || !gsap) return;
 
     const message = inputRef.current.value;
     setInput("");
@@ -130,13 +126,16 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white relative overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-black text-white relative overflow-hidden">
+      {/* Gradiente superior */}
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-purple-900/60 via-purple-800/5 to-transparent pointer-events-none" />
+
       {/* Cursor brillante */}
       <motion.div
         ref={cursorRef}
         className="pointer-events-none fixed w-64 h-64 rounded-full"
         style={{
-          background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)',
+          background: 'radial-gradient(circle, rgba(168,85,247,0.05) 0%, rgba(168,85,247,0) 70%)',
           transform: 'translate(-50%, -50%)'
         }}
       />
@@ -152,27 +151,27 @@ export default function Home() {
               transition={{ duration: 0.5, ease: "easeInOut" }}
             >
               <motion.h1
-                className="text-4xl md:text-6xl font-bold text-center mb-4 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 text-transparent bg-clip-text gradient-text"
+                className="text-4xl md:text-6xl font-bold text-center mb-4 silver-shine"
                 initial={{ opacity: 1 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                ¿Qué quieres construir?
+                Creemos tu agente IA
               </motion.h1>
               <motion.p
-                className="text-lg md:text-xl text-center text-gray-300"
+                className="text-lg md:text-xl text-center text-gray-400"
                 initial={{ opacity: 1 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3, delay: 0.1 }}
               >
-                Prompt, ejecuta, edita y despliega aplicaciones full-stack web y móviles.
+                Revoluciona tu empresa con un agente IA personalizado
               </motion.p>
             </motion.header>
           )}
         </AnimatePresence>
 
         {/* Área de chat */}
-        <div className={`flex-1 flex flex-col justify-${messages.length === 0 ? 'center' : 'end'} px-4 max-w-4xl mx-auto w-full`}>
+        <div className={`flex-1 flex flex-col justify-${messages.length === 0 ? 'center' : 'end'} px-4 max-w-4xl mx-auto w-full relative z-10`}>
           {/* Mensajes */}
           <div
             ref={messagesContainerRef}
@@ -180,7 +179,7 @@ export default function Home() {
           >
             {messages.map((message, i) => (
               <div key={i} className="fade-in flex justify-center">
-                <div className="max-w-2xl w-full bg-gray-800/40 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-gray-700/50">
+                <div className="max-w-2xl w-full bg-[#171717]/40 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-gray-800/50">
                   <div className="prose prose-invert max-w-none text-base md:text-lg font-normal text-white/95">
                     {message}
                   </div>
@@ -201,59 +200,77 @@ export default function Home() {
             >
               <form onSubmit={handleSubmit} className="relative">
                 <div className="relative flex items-end gap-2">
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyDown}
-                    className="w-full p-4 pr-16 rounded-2xl bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 focus:outline-none focus:border-purple-500 transition-all duration-300 resize-none text-white text-base md:text-lg"
-                    placeholder="¿Cómo puedo ayudarte hoy?"
-                    rows={2}
-                    style={{
-                      boxShadow: '0 0 40px rgba(123, 31, 162, 0.1)'
-                    }}
-                  />
+                  <div className="w-full relative rounded-2xl p-[0.5px] overflow-hidden animate-rotate-border bg-conic from-[#1a1a1a] via-purple-500 to-[#1a1a1a] from-[80%] via-[90%] to-[100%]">
+                    <textarea
+                      ref={inputRef}
+                      value={input}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      className="w-full p-4 pr-16 rounded-2xl bg-black/100 backdrop-blur-sm outline-none focus:outline-none transition-all duration-300 resize-none text-white text-base md:text-lg block text-center"
+                      placeholder="¿Cómo puedo ayudarte hoy?"
+                      rows={2}
+                      style={{
+                        boxShadow: '0 0 40px rgba(168, 85, 247, 0.05)'
+                      }}
+                    />
+                  </div>
+                  <style jsx global>{`
+                    @property --border-angle {
+                      syntax: '<angle>';
+                      inherits: false;
+                      initial-value: 0deg;
+                    }
+
+                    .animate-rotate-border {
+                      background: conic-gradient(from var(--border-angle), #1a1a1a, #1a1a1a 80%, #9333ea 90%, #1a1a1a 100%);
+                      animation: border-rotate 3s linear infinite;
+                    }
+
+                    @keyframes border-rotate {
+                      to {
+                        --border-angle: 360deg;
+                      }
+                    }
+
+                    .animate-rotate-border textarea {
+                      margin: 0;
+                      display: block;
+                      position: relative;
+                      z-index: 1;
+                    }
+
+                    textarea:focus::placeholder {
+                      opacity: 0;
+                      transition: opacity 0.2s ease;
+                    }
+
+                    textarea::placeholder {
+                      text-align: center;
+                      transition: opacity 0.2s ease;
+                    }
+                  `}</style>
                   <button
                     type="submit"
-                    className="absolute right-3 bottom-3 p-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/25 flex items-center justify-center group"
+                    className={`absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-purple-600/20 hover:bg-purple-500/30 transition-all duration-300 flex items-center justify-center group z-10 ${!input.trim() ? 'opacity-0' : 'opacity-100'}`}
                     aria-label="Enviar mensaje"
                   >
                     <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
+                      width="16" 
+                      height="16" 
                       viewBox="0 0 24 24" 
-                      fill="currentColor" 
-                      className="w-5 h-5 transform group-hover:translate-x-0.5 transition-all duration-200"
+                      fill="none" 
+                      className="text-purple-400 group-hover:text-purple-300 transition-colors"
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
                     >
-                      <path d="M3.478 2.404a.75.75 0 00-.926.941l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.404z" />
+                      <path d="M5 12h14m-7-7l7 7-7 7"/>
                     </svg>
                   </button>
                 </div>
               </form>
             </div>
-
-            {/* Acciones sugeridas */}
-            {messages.length === 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto mt-6">
-                {suggestedActions.map((action, index) => (
-                  <motion.button
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 * index }}
-                    onClick={() => {
-                      if (inputRef.current) {
-                        inputRef.current.value = action.action;
-                        handleSubmit({ preventDefault: () => {} } as React.FormEvent);
-                      }
-                    }}
-                    className="p-4 rounded-lg bg-gray-800/50 backdrop-blur-lg border border-gray-700 hover:border-purple-500 transition-all duration-300"
-                  >
-                    <span className="font-medium text-white">{action.title}</span>
-                    <span className="text-gray-400 ml-2">{action.label}</span>
-                  </motion.button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </main>
