@@ -5,31 +5,108 @@ import { useActions } from "ai/rsc";
 import { Message } from "@/components/message";
 import { useScrollToBottom } from "@/components/use-scroll-to-bottom";
 import { motion } from "framer-motion";
+import { PRESET_CONVERSATIONS, PresetConversation } from "@/components/preset-conversations";
+import { VehicleShowcase } from "@/components/vehicle-showcase";
+import { InventoryView } from "@/components/inventory-view";
+import { ComparisonView } from "@/components/comparison-view";
+import { TestDriveForm } from "@/components/test-drive-form";
+import { LAND_ROVER_INVENTORY } from "@/components/vehicle-data";
 
 export default function Home() {
   const { sendMessage } = useActions();
 
   const [input, setInput] = useState<string>("");
   const [messages, setMessages] = useState<Array<ReactNode>>([]);
+  const [currentSuggestedActions, setCurrentSuggestedActions] = useState<any[]>([]);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [messagesContainerRef, messagesEndRef] =
     useScrollToBottom<HTMLDivElement>();
 
-  const suggestedActions = [
-    { title: "Show me", label: "the Range Rover Sport", action: "Tell me about the Range Rover Sport" },
-    { title: "View", label: "available inventory", action: "Show me all available Land Rover vehicles" },
-    {
-      title: "Compare",
-      label: "Defender vs Range Rover Sport",
-      action: "Compare the Defender 110 and Range Rover Sport",
-    },
-    {
-      title: "Schedule",
-      label: "a test drive",
-      action: "I'd like to schedule a test drive for the Range Rover Sport",
-    },
-  ];
+  const initialSuggestedActions = PRESET_CONVERSATIONS.map(conv => ({
+    title: conv.title,
+    label: conv.label,
+    action: conv.action,
+    conversation: conv,
+  }));
+
+  const executePresetConversation = async (conversation: PresetConversation) => {
+    const newMessages: ReactNode[] = [];
+
+    for (const presetMsg of conversation.messages) {
+      if (presetMsg.role === "user") {
+        newMessages.push(
+          <Message
+            key={`preset-${messages.length + newMessages.length}`}
+            role="user"
+            content={presetMsg.content}
+          />
+        );
+      } else if (presetMsg.role === "assistant") {
+        if (presetMsg.tool) {
+          let component;
+          switch (presetMsg.tool) {
+            case "showVehicleDetails":
+              const vehicle = LAND_ROVER_INVENTORY.find(v =>
+                v.model.toLowerCase().includes(presetMsg.toolArgs.model.toLowerCase())
+              ) || LAND_ROVER_INVENTORY[0];
+              component = <VehicleShowcase vehicle={vehicle} />;
+              break;
+            case "showInventory":
+              component = <InventoryView vehicles={LAND_ROVER_INVENTORY} />;
+              break;
+            case "compareModels":
+              component = <ComparisonView data={{
+                models: presetMsg.toolArgs.models,
+                categories: [
+                  {
+                    name: "Performance",
+                    specs: ["Turbocharged Engine", "All-Wheel Drive", "Terrain Response"],
+                  },
+                  {
+                    name: "Technology",
+                    specs: ["Pivi Pro Infotainment", "Digital Display", "Meridian Audio"],
+                  },
+                  {
+                    name: "Safety",
+                    specs: ["Adaptive Cruise", "Lane Keep Assist", "Blind Spot Monitor"],
+                  },
+                ],
+              }} />;
+              break;
+            case "scheduleTestDrive":
+              component = <TestDriveForm model={presetMsg.toolArgs.model} />;
+              break;
+            default:
+              component = <div>{presetMsg.content}</div>;
+          }
+          newMessages.push(
+            <Message
+              key={`preset-${messages.length + newMessages.length}`}
+              role="assistant"
+              content={component}
+            />
+          );
+        } else {
+          newMessages.push(
+            <Message
+              key={`preset-${messages.length + newMessages.length}`}
+              role="assistant"
+              content={presetMsg.content}
+            />
+          );
+        }
+      }
+    }
+
+    setMessages((prev) => [...prev, ...newMessages]);
+
+    if (conversation.followUpPrompts) {
+      setCurrentSuggestedActions(conversation.followUpPrompts);
+    } else {
+      setCurrentSuggestedActions([]);
+    }
+  };
 
   return (
     <div className="flex flex-row justify-center pb-20 h-dvh bg-zinc-50 dark:bg-zinc-950">
@@ -65,12 +142,34 @@ export default function Home() {
 
         <div className="grid sm:grid-cols-2 gap-2 w-full px-4 md:px-0 mx-auto md:max-w-[500px] mb-4">
           {messages.length === 0 &&
-            suggestedActions.map((action, index) => (
+            initialSuggestedActions.map((action, index) => (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.01 * index }}
                 key={index}
+                className={index > 1 ? "hidden sm:block" : "block"}
+              >
+                <button
+                  onClick={async () => {
+                    await executePresetConversation(action.conversation);
+                  }}
+                  className="w-full text-left border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-300 rounded-lg p-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex flex-col"
+                >
+                  <span className="font-medium">{action.title}</span>
+                  <span className="text-zinc-500 dark:text-zinc-400">
+                    {action.label}
+                  </span>
+                </button>
+              </motion.div>
+            ))}
+          {messages.length > 0 && currentSuggestedActions.length > 0 &&
+            currentSuggestedActions.map((action, index) => (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.01 * index }}
+                key={`followup-${index}`}
                 className={index > 1 ? "hidden sm:block" : "block"}
               >
                 <button
@@ -87,6 +186,7 @@ export default function Home() {
                       action.action,
                     );
                     setMessages((messages) => [...messages, response]);
+                    setCurrentSuggestedActions([]);
                   }}
                   className="w-full text-left border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-300 rounded-lg p-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex flex-col"
                 >
