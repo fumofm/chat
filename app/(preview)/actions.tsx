@@ -25,18 +25,15 @@ const customerInterests = {
   },
 };
 
-async function sendMessage(message: string) {
+const sendMessage = async (message: string) => {
   "use server";
 
-  const aiState = getMutableAIState();
+  const messages = getMutableAIState<typeof AI>("messages");
 
-  aiState.update({
-    ...aiState.get(),
-    messages: [
-      ...aiState.get().messages,
-      { role: "user", content: message },
-    ],
-  });
+  messages.update([
+    ...(messages.get() as CoreMessage[]),
+    { role: "user", content: message },
+  ]);
 
   const contentStream = createStreamableValue("");
   const textComponent = <TextStreamMessage content={contentStream.value} />;
@@ -56,16 +53,13 @@ async function sendMessage(message: string) {
 
       Tone: Professional, sophisticated, and helpful. Emphasize Land Rover's luxury, capability, and British heritage.
     `,
-    messages: aiState.get().messages as CoreMessage[],
+    messages: messages.get() as CoreMessage[],
     text: async function* ({ content, done }) {
       if (done) {
-        aiState.done({
-          ...aiState.get(),
-          messages: [
-            ...aiState.get().messages,
-            { role: "assistant", content },
-          ],
-        });
+        messages.done([
+          ...(messages.get() as CoreMessage[]),
+          { role: "assistant", content },
+        ]);
 
         contentStream.done();
       } else {
@@ -86,34 +80,31 @@ async function sendMessage(message: string) {
             v.model.toLowerCase().includes(model.toLowerCase())
           ) || LAND_ROVER_INVENTORY[0];
 
-          aiState.done({
-            ...aiState.get(),
-            messages: [
-              ...aiState.get().messages,
-              {
-                role: "assistant",
-                content: [
-                  {
-                    type: "tool-call",
-                    toolCallId,
-                    toolName: "showVehicleDetails",
-                    args: { model },
-                  },
-                ],
-              },
-              {
-                role: "tool",
-                content: [
-                  {
-                    type: "tool-result",
-                    toolName: "showVehicleDetails",
-                    toolCallId,
-                    result: vehicle,
-                  },
-                ],
-              },
-            ],
-          });
+          messages.done([
+            ...(messages.get() as CoreMessage[]),
+            {
+              role: "assistant",
+              content: [
+                {
+                  type: "tool-call",
+                  toolCallId,
+                  toolName: "showVehicleDetails",
+                  args: { model },
+                },
+              ],
+            },
+            {
+              role: "tool",
+              content: [
+                {
+                  type: "tool-result",
+                  toolName: "showVehicleDetails",
+                  toolCallId,
+                  result: vehicle,
+                },
+              ],
+            },
+          ]);
 
           return <Message role="assistant" content={<VehicleShowcase vehicle={vehicle} />} />;
         },
@@ -124,34 +115,31 @@ async function sendMessage(message: string) {
         generate: async function* ({}) {
           const toolCallId = generateId();
 
-          aiState.done({
-            ...aiState.get(),
-            messages: [
-              ...aiState.get().messages,
-              {
-                role: "assistant",
-                content: [
-                  {
-                    type: "tool-call",
-                    toolCallId,
-                    toolName: "showInventory",
-                    args: {},
-                  },
-                ],
-              },
-              {
-                role: "tool",
-                content: [
-                  {
-                    type: "tool-result",
-                    toolName: "showInventory",
-                    toolCallId,
-                    result: LAND_ROVER_INVENTORY,
-                  },
-                ],
-              },
-            ],
-          });
+          messages.done([
+            ...(messages.get() as CoreMessage[]),
+            {
+              role: "assistant",
+              content: [
+                {
+                  type: "tool-call",
+                  toolCallId,
+                  toolName: "showInventory",
+                  args: {},
+                },
+              ],
+            },
+            {
+              role: "tool",
+              content: [
+                {
+                  type: "tool-result",
+                  toolName: "showInventory",
+                  toolCallId,
+                  result: LAND_ROVER_INVENTORY,
+                },
+              ],
+            },
+          ]);
 
           return <Message role="assistant" content={<InventoryView vehicles={LAND_ROVER_INVENTORY} />} />;
         },
@@ -181,34 +169,31 @@ async function sendMessage(message: string) {
             ],
           };
 
-          aiState.done({
-            ...aiState.get(),
-            messages: [
-              ...aiState.get().messages,
-              {
-                role: "assistant",
-                content: [
-                  {
-                    type: "tool-call",
-                    toolCallId,
-                    toolName: "compareModels",
-                    args: { models },
-                  },
-                ],
-              },
-              {
-                role: "tool",
-                content: [
-                  {
-                    type: "tool-result",
-                    toolName: "compareModels",
-                    toolCallId,
-                    result: comparisonData,
-                  },
-                ],
-              },
-            ],
-          });
+          messages.done([
+            ...(messages.get() as CoreMessage[]),
+            {
+              role: "assistant",
+              content: [
+                {
+                  type: "tool-call",
+                  toolCallId,
+                  toolName: "compareModels",
+                  args: { models },
+                },
+              ],
+            },
+            {
+              role: "tool",
+              content: [
+                {
+                  type: "tool-result",
+                  toolName: "compareModels",
+                  toolCallId,
+                  result: comparisonData,
+                },
+              ],
+            },
+          ]);
 
           return <Message role="assistant" content={<ComparisonView data={comparisonData} />} />;
         },
@@ -221,34 +206,31 @@ async function sendMessage(message: string) {
         generate: async function* ({ model }) {
           const toolCallId = generateId();
 
-          aiState.done({
-            ...aiState.get(),
-            messages: [
-              ...aiState.get().messages,
-              {
-                role: "assistant",
-                content: [
-                  {
-                    type: "tool-call",
-                    toolCallId,
-                    toolName: "scheduleTestDrive",
-                    args: { model },
-                  },
-                ],
-              },
-              {
-                role: "tool",
-                content: [
-                  {
-                    type: "tool-result",
-                    toolName: "scheduleTestDrive",
-                    toolCallId,
-                    result: `Test drive form displayed for ${model}`,
-                  },
-                ],
-              },
-            ],
-          });
+          messages.done([
+            ...(messages.get() as CoreMessage[]),
+            {
+              role: "assistant",
+              content: [
+                {
+                  type: "tool-call",
+                  toolCallId,
+                  toolName: "scheduleTestDrive",
+                  args: { model },
+                },
+              ],
+            },
+            {
+              role: "tool",
+              content: [
+                {
+                  type: "tool-result",
+                  toolName: "scheduleTestDrive",
+                  toolCallId,
+                  result: `Test drive form displayed for ${model}`,
+                },
+              ],
+            },
+          ]);
 
           return <Message role="assistant" content={<TestDriveForm model={model} />} />;
         },
