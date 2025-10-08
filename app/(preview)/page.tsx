@@ -26,28 +26,37 @@ export default function Home() {
   }));
 
   const executePresetConversation = async (conversation: PresetConversation) => {
-    for (let i = 0; i < conversation.messages.length; i++) {
-      const messageContent = conversation.messages[i];
+    // Add preset conversation messages as suggested follow-ups
+    const allMessages = [...conversation.messages];
 
-      const userMsg = (
-        <Message
-          key={`preset-user-${messages.length + i * 2}`}
-          role="user"
-          content={messageContent}
-        />
-      );
-      setMessages((prev) => [...prev, userMsg]);
+    // Send the first message
+    const firstMessage = allMessages[0];
+    const userMsg = (
+      <Message
+        key={messages.length}
+        role="user"
+        content={firstMessage}
+      />
+    );
+    setMessages((prev) => [...prev, userMsg]);
 
-      await new Promise(resolve => setTimeout(resolve, 300));
+    const response: ReactNode = await sendMessage(firstMessage);
+    setMessages((prev) => [...prev, response]);
 
-      const response: ReactNode = await sendMessage(messageContent);
-      setMessages((prev) => [...prev, response]);
+    // Set up follow-up prompts with remaining conversation messages + additional prompts
+    const remainingMessages = allMessages.slice(1).map((msg, idx) => ({
+      title: idx === 0 ? "Ask about" : "Tell me",
+      label: msg.length > 40 ? msg.substring(0, 40) + "..." : msg,
+      action: msg,
+    }));
 
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
+    const allFollowUps = [
+      ...remainingMessages,
+      ...(conversation.followUpPrompts || []),
+    ];
 
-    if (conversation.followUpPrompts) {
-      setCurrentSuggestedActions(conversation.followUpPrompts);
+    if (allFollowUps.length > 0) {
+      setCurrentSuggestedActions(allFollowUps.slice(0, 4));
     } else {
       setCurrentSuggestedActions([]);
     }
