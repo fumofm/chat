@@ -6,11 +6,6 @@ import { Message } from "@/components/message";
 import { useScrollToBottom } from "@/components/use-scroll-to-bottom";
 import { motion } from "framer-motion";
 import { PRESET_CONVERSATIONS, PresetConversation } from "@/components/preset-conversations";
-import { VehicleShowcase } from "@/components/vehicle-showcase";
-import { InventoryView } from "@/components/inventory-view";
-import { ComparisonView } from "@/components/comparison-view";
-import { TestDriveForm } from "@/components/test-drive-form";
-import { LAND_ROVER_INVENTORY } from "@/components/vehicle-data";
 
 export default function Home() {
   const { sendMessage } = useActions();
@@ -31,75 +26,25 @@ export default function Home() {
   }));
 
   const executePresetConversation = async (conversation: PresetConversation) => {
-    const newMessages: ReactNode[] = [];
+    for (let i = 0; i < conversation.messages.length; i++) {
+      const messageContent = conversation.messages[i];
 
-    for (const presetMsg of conversation.messages) {
-      if (presetMsg.role === "user") {
-        newMessages.push(
-          <Message
-            key={`preset-${messages.length + newMessages.length}`}
-            role="user"
-            content={presetMsg.content}
-          />
-        );
-      } else if (presetMsg.role === "assistant") {
-        if (presetMsg.tool) {
-          let component;
-          switch (presetMsg.tool) {
-            case "showVehicleDetails":
-              const vehicle = LAND_ROVER_INVENTORY.find(v =>
-                v.model.toLowerCase().includes(presetMsg.toolArgs.model.toLowerCase())
-              ) || LAND_ROVER_INVENTORY[0];
-              component = <VehicleShowcase vehicle={vehicle} />;
-              break;
-            case "showInventory":
-              component = <InventoryView vehicles={LAND_ROVER_INVENTORY} />;
-              break;
-            case "compareModels":
-              component = <ComparisonView data={{
-                models: presetMsg.toolArgs.models,
-                categories: [
-                  {
-                    name: "Performance",
-                    specs: ["Turbocharged Engine", "All-Wheel Drive", "Terrain Response"],
-                  },
-                  {
-                    name: "Technology",
-                    specs: ["Pivi Pro Infotainment", "Digital Display", "Meridian Audio"],
-                  },
-                  {
-                    name: "Safety",
-                    specs: ["Adaptive Cruise", "Lane Keep Assist", "Blind Spot Monitor"],
-                  },
-                ],
-              }} />;
-              break;
-            case "scheduleTestDrive":
-              component = <TestDriveForm model={presetMsg.toolArgs.model} />;
-              break;
-            default:
-              component = <div>{presetMsg.content}</div>;
-          }
-          newMessages.push(
-            <Message
-              key={`preset-${messages.length + newMessages.length}`}
-              role="assistant"
-              content={component}
-            />
-          );
-        } else {
-          newMessages.push(
-            <Message
-              key={`preset-${messages.length + newMessages.length}`}
-              role="assistant"
-              content={presetMsg.content}
-            />
-          );
-        }
-      }
+      const userMsg = (
+        <Message
+          key={`preset-user-${messages.length + i * 2}`}
+          role="user"
+          content={messageContent}
+        />
+      );
+      setMessages((prev) => [...prev, userMsg]);
+
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const response: ReactNode = await sendMessage(messageContent);
+      setMessages((prev) => [...prev, response]);
+
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
-
-    setMessages((prev) => [...prev, ...newMessages]);
 
     if (conversation.followUpPrompts) {
       setCurrentSuggestedActions(conversation.followUpPrompts);
