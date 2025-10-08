@@ -5,62 +5,31 @@ import { useActions } from "ai/rsc";
 import { Message } from "@/components/message";
 import { useScrollToBottom } from "@/components/use-scroll-to-bottom";
 import { motion } from "framer-motion";
-import { PRESET_CONVERSATIONS, PresetConversation } from "@/components/preset-conversations";
 
 export default function Home() {
   const { sendMessage } = useActions();
 
   const [input, setInput] = useState<string>("");
   const [messages, setMessages] = useState<Array<ReactNode>>([]);
-  const [currentSuggestedActions, setCurrentSuggestedActions] = useState<any[]>([]);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [messagesContainerRef, messagesEndRef] =
     useScrollToBottom<HTMLDivElement>();
 
-  const initialSuggestedActions = PRESET_CONVERSATIONS.map(conv => ({
-    title: conv.title,
-    label: conv.label,
-    action: conv.action,
-    conversation: conv,
-  }));
-
-  const executePresetConversation = async (conversation: PresetConversation) => {
-    // Add preset conversation messages as suggested follow-ups
-    const allMessages = [...conversation.messages];
-
-    // Send the first message
-    const firstMessage = allMessages[0];
-    const userMsg = (
-      <Message
-        key={messages.length}
-        role="user"
-        content={firstMessage}
-      />
-    );
-    setMessages((prev) => [...prev, userMsg]);
-
-    const response: ReactNode = await sendMessage(firstMessage);
-    setMessages((prev) => [...prev, response]);
-
-    // Set up follow-up prompts with remaining conversation messages + additional prompts
-    const remainingMessages = allMessages.slice(1).map((msg, idx) => ({
-      title: idx === 0 ? "Ask about" : "Tell me",
-      label: msg.length > 40 ? msg.substring(0, 40) + "..." : msg,
-      action: msg,
-    }));
-
-    const allFollowUps = [
-      ...remainingMessages,
-      ...(conversation.followUpPrompts || []),
-    ];
-
-    if (allFollowUps.length > 0) {
-      setCurrentSuggestedActions(allFollowUps.slice(0, 4));
-    } else {
-      setCurrentSuggestedActions([]);
-    }
-  };
+  const suggestedActions = [
+    { title: "Show me", label: "the Range Rover Sport", action: "Tell me about the Range Rover Sport" },
+    { title: "View", label: "available inventory", action: "Show me all available Land Rover vehicles" },
+    {
+      title: "Compare",
+      label: "Defender vs Range Rover Sport",
+      action: "Compare the Defender 110 and Range Rover Sport",
+    },
+    {
+      title: "Schedule",
+      label: "a test drive",
+      action: "I'd like to schedule a test drive for the Range Rover Sport",
+    },
+  ];
 
   return (
     <div className="flex flex-row justify-center pb-20 h-dvh bg-zinc-50 dark:bg-zinc-950">
@@ -96,34 +65,12 @@ export default function Home() {
 
         <div className="grid sm:grid-cols-2 gap-2 w-full px-4 md:px-0 mx-auto md:max-w-[500px] mb-4">
           {messages.length === 0 &&
-            initialSuggestedActions.map((action, index) => (
+            suggestedActions.map((action, index) => (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.01 * index }}
                 key={index}
-                className={index > 1 ? "hidden sm:block" : "block"}
-              >
-                <button
-                  onClick={async () => {
-                    await executePresetConversation(action.conversation);
-                  }}
-                  className="w-full text-left border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-300 rounded-lg p-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex flex-col"
-                >
-                  <span className="font-medium">{action.title}</span>
-                  <span className="text-zinc-500 dark:text-zinc-400">
-                    {action.label}
-                  </span>
-                </button>
-              </motion.div>
-            ))}
-          {messages.length > 0 && currentSuggestedActions.length > 0 &&
-            currentSuggestedActions.map((action, index) => (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.01 * index }}
-                key={`followup-${index}`}
                 className={index > 1 ? "hidden sm:block" : "block"}
               >
                 <button
@@ -140,7 +87,6 @@ export default function Home() {
                       action.action,
                     );
                     setMessages((messages) => [...messages, response]);
-                    setCurrentSuggestedActions([]);
                   }}
                   className="w-full text-left border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-300 rounded-lg p-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex flex-col"
                 >
