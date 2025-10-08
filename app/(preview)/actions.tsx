@@ -25,10 +25,10 @@ const customerInterests = {
   },
 };
 
-const sendMessage = async (message: string) => {
+async function sendMessage(message: string) {
   "use server";
 
-  const aiState = getMutableAIState<typeof AI>();
+  const aiState = getMutableAIState();
 
   aiState.update({
     ...aiState.get(),
