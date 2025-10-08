@@ -9,27 +9,20 @@ import {
 } from "ai/rsc";
 import { ReactNode } from "react";
 import { z } from "zod";
-import { CameraView } from "@/components/camera-view";
-import { HubView } from "@/components/hub-view";
-import { UsageView } from "@/components/usage-view";
+import { VehicleShowcase } from "@/components/vehicle-showcase";
+import { InventoryView } from "@/components/inventory-view";
+import { ComparisonView } from "@/components/comparison-view";
+import { TestDriveForm } from "@/components/test-drive-form";
+import { LAND_ROVER_INVENTORY } from "@/components/vehicle-data";
 
-export interface Hub {
-  climate: Record<"low" | "high", number>;
-  lights: Array<{ name: string; status: boolean }>;
-  locks: Array<{ name: string; isLocked: boolean }>;
-}
-
-let hub: Hub = {
-  climate: {
-    low: 23,
-    high: 25,
+const customerInterests = {
+  preferredModels: ["Range Rover Sport", "Defender 110"],
+  budget: 100000,
+  preferences: {
+    luxury: true,
+    offRoad: true,
+    familyFriendly: true,
   },
-  lights: [
-    { name: "patio", status: true },
-    { name: "kitchen", status: false },
-    { name: "garage", status: true },
-  ],
-  locks: [{ name: "back door", isLocked: true }],
 };
 
 const sendMessage = async (message: string) => {
@@ -48,8 +41,17 @@ const sendMessage = async (message: string) => {
   const { value: stream } = await streamUI({
     model: openai("gpt-4o"),
     system: `\
-      - you are a friendly home automation assistant
-      - reply in lower case
+      You are an expert Land Rover concierge assistant helping a customer explore Land Rover vehicles.
+      The customer has expressed interest in Land Rover and is looking to learn more about the lineup.
+
+      Key responsibilities:
+      - Provide detailed, enthusiastic information about Land Rover vehicles
+      - Help compare different models based on customer needs
+      - Explain features, capabilities, and luxury amenities
+      - Assist with scheduling test drives
+      - Be professional, knowledgeable, and passionate about Land Rover heritage
+
+      Tone: Professional, sophisticated, and helpful. Emphasize Land Rover's luxury, capability, and British heritage.
     `,
     messages: messages.get() as CoreMessage[],
     text: async function* ({ content, done }) {
@@ -67,8 +69,48 @@ const sendMessage = async (message: string) => {
       return textComponent;
     },
     tools: {
-      viewCameras: {
-        description: "view current active cameras",
+      showVehicleDetails: {
+        description: "Show detailed information about a specific Land Rover model",
+        parameters: z.object({
+          model: z.string().describe("The Land Rover model name"),
+        }),
+        generate: async function* ({ model }) {
+          const toolCallId = generateId();
+          const vehicle = LAND_ROVER_INVENTORY.find(v =>
+            v.model.toLowerCase().includes(model.toLowerCase())
+          ) || LAND_ROVER_INVENTORY[0];
+
+          messages.done([
+            ...(messages.get() as CoreMessage[]),
+            {
+              role: "assistant",
+              content: [
+                {
+                  type: "tool-call",
+                  toolCallId,
+                  toolName: "showVehicleDetails",
+                  args: { model },
+                },
+              ],
+            },
+            {
+              role: "tool",
+              content: [
+                {
+                  type: "tool-result",
+                  toolName: "showVehicleDetails",
+                  toolCallId,
+                  result: vehicle,
+                },
+              ],
+            },
+          ]);
+
+          return <Message role="assistant" content={<VehicleShowcase vehicle={vehicle} />} />;
+        },
+      },
+      showInventory: {
+        description: "Display the complete Land Rover inventory available",
         parameters: z.object({}),
         generate: async function* ({}) {
           const toolCallId = generateId();
@@ -81,7 +123,7 @@ const sendMessage = async (message: string) => {
                 {
                   type: "tool-call",
                   toolCallId,
-                  toolName: "viewCameras",
+                  toolName: "showInventory",
                   args: {},
                 },
               ],
@@ -91,72 +133,41 @@ const sendMessage = async (message: string) => {
               content: [
                 {
                   type: "tool-result",
-                  toolName: "viewCameras",
+                  toolName: "showInventory",
                   toolCallId,
-                  result: `The active cameras are currently displayed on the screen`,
+                  result: LAND_ROVER_INVENTORY,
                 },
               ],
             },
           ]);
 
-          return <Message role="assistant" content={<CameraView />} />;
+          return <Message role="assistant" content={<InventoryView vehicles={LAND_ROVER_INVENTORY} />} />;
         },
       },
-      viewHub: {
-        description:
-          "view the hub that contains current quick summary and actions for temperature, lights, and locks",
-        parameters: z.object({}),
-        generate: async function* ({}) {
-          const toolCallId = generateId();
-
-          messages.done([
-            ...(messages.get() as CoreMessage[]),
-            {
-              role: "assistant",
-              content: [
-                {
-                  type: "tool-call",
-                  toolCallId,
-                  toolName: "viewHub",
-                  args: {},
-                },
-              ],
-            },
-            {
-              role: "tool",
-              content: [
-                {
-                  type: "tool-result",
-                  toolName: "viewHub",
-                  toolCallId,
-                  result: hub,
-                },
-              ],
-            },
-          ]);
-
-          return <Message role="assistant" content={<HubView hub={hub} />} />;
-        },
-      },
-      updateHub: {
-        description: "update the hub with new values",
+      compareModels: {
+        description: "Compare different Land Rover models side by side",
         parameters: z.object({
-          hub: z.object({
-            climate: z.object({
-              low: z.number(),
-              high: z.number(),
-            }),
-            lights: z.array(
-              z.object({ name: z.string(), status: z.boolean() }),
-            ),
-            locks: z.array(
-              z.object({ name: z.string(), isLocked: z.boolean() }),
-            ),
-          }),
+          models: z.array(z.string()).describe("Array of model names to compare"),
         }),
-        generate: async function* ({ hub: newHub }) {
-          hub = newHub;
+        generate: async function* ({ models }) {
           const toolCallId = generateId();
+          const comparisonData = {
+            models: models,
+            categories: [
+              {
+                name: "Performance",
+                specs: ["Turbocharged Engine", "All-Wheel Drive", "Terrain Response"],
+              },
+              {
+                name: "Technology",
+                specs: ["Pivi Pro Infotainment", "Digital Display", "Meridian Audio"],
+              },
+              {
+                name: "Safety",
+                specs: ["Adaptive Cruise", "Lane Keep Assist", "Blind Spot Monitor"],
+              },
+            ],
+          };
 
           messages.done([
             ...(messages.get() as CoreMessage[]),
@@ -166,8 +177,8 @@ const sendMessage = async (message: string) => {
                 {
                   type: "tool-call",
                   toolCallId,
-                  toolName: "updateHub",
-                  args: { hub },
+                  toolName: "compareModels",
+                  args: { models },
                 },
               ],
             },
@@ -176,23 +187,23 @@ const sendMessage = async (message: string) => {
               content: [
                 {
                   type: "tool-result",
-                  toolName: "updateHub",
+                  toolName: "compareModels",
                   toolCallId,
-                  result: `The hub has been updated with the new values`,
+                  result: comparisonData,
                 },
               ],
             },
           ]);
 
-          return <Message role="assistant" content={<HubView hub={hub} />} />;
+          return <Message role="assistant" content={<ComparisonView data={comparisonData} />} />;
         },
       },
-      viewUsage: {
-        description: "view current usage for electricity, water, or gas",
+      scheduleTestDrive: {
+        description: "Schedule a test drive for a specific Land Rover model",
         parameters: z.object({
-          type: z.enum(["electricity", "water", "gas"]),
+          model: z.string().describe("The Land Rover model for test drive"),
         }),
-        generate: async function* ({ type }) {
+        generate: async function* ({ model }) {
           const toolCallId = generateId();
 
           messages.done([
@@ -203,8 +214,8 @@ const sendMessage = async (message: string) => {
                 {
                   type: "tool-call",
                   toolCallId,
-                  toolName: "viewUsage",
-                  args: { type },
+                  toolName: "scheduleTestDrive",
+                  args: { model },
                 },
               ],
             },
@@ -213,17 +224,15 @@ const sendMessage = async (message: string) => {
               content: [
                 {
                   type: "tool-result",
-                  toolName: "viewUsage",
+                  toolName: "scheduleTestDrive",
                   toolCallId,
-                  result: `The current usage for ${type} is currently displayed on the screen`,
+                  result: `Test drive form displayed for ${model}`,
                 },
               ],
             },
           ]);
 
-          return (
-            <Message role="assistant" content={<UsageView type={type} />} />
-          );
+          return <Message role="assistant" content={<TestDriveForm model={model} />} />;
         },
       },
     },

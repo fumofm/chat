@@ -5,8 +5,6 @@ import { useActions } from "ai/rsc";
 import { Message } from "@/components/message";
 import { useScrollToBottom } from "@/components/use-scroll-to-bottom";
 import { motion } from "framer-motion";
-import { MasonryIcon, VercelIcon } from "@/components/icons";
-import Link from "next/link";
 
 export default function Home() {
   const { sendMessage } = useActions();
@@ -19,22 +17,22 @@ export default function Home() {
     useScrollToBottom<HTMLDivElement>();
 
   const suggestedActions = [
-    { title: "View all", label: "my cameras", action: "View all my cameras" },
-    { title: "Show me", label: "my smart home hub", action: "Show me my smart home hub" },
+    { title: "Show me", label: "the Range Rover Sport", action: "Tell me about the Range Rover Sport" },
+    { title: "View", label: "available inventory", action: "Show me all available Land Rover vehicles" },
     {
-      title: "How much",
-      label: "electricity have I used this month?",
-      action: "Show electricity usage",
+      title: "Compare",
+      label: "Defender vs Range Rover Sport",
+      action: "Compare the Defender 110 and Range Rover Sport",
     },
     {
-      title: "How much",
-      label: "water have I used this month?",
-      action: "Show water usage",
+      title: "Schedule",
+      label: "a test drive",
+      action: "I'd like to schedule a test drive for the Range Rover Sport",
     },
   ];
 
   return (
-    <div className="flex flex-row justify-center pb-20 h-dvh bg-white dark:bg-zinc-900">
+    <div className="flex flex-row justify-center pb-20 h-dvh bg-zinc-50 dark:bg-zinc-950">
       <div className="flex flex-col justify-between gap-4">
         <div
           ref={messagesContainerRef}
@@ -42,28 +40,21 @@ export default function Home() {
         >
           {messages.length === 0 && (
             <motion.div className="h-[350px] px-4 w-full md:w-[500px] md:px-0 pt-20">
-              <div className="border rounded-lg p-6 flex flex-col gap-4 text-zinc-500 text-sm dark:text-zinc-400 dark:border-zinc-700">
-                <p className="flex flex-row justify-center gap-4 items-center text-zinc-900 dark:text-zinc-50">
-                  <VercelIcon size={16} />
-                  <span>+</span>
-                  <MasonryIcon />
+              <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-8 flex flex-col gap-6 bg-gradient-to-br from-white to-zinc-50 dark:from-zinc-900 dark:to-zinc-800">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="text-4xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
+                    LAND ROVER
+                  </div>
+                  <div className="text-sm text-zinc-600 dark:text-zinc-400 tracking-wide">
+                    ABOVE AND BEYOND
+                  </div>
+                </div>
+                <div className="h-px bg-gradient-to-r from-transparent via-zinc-300 dark:via-zinc-600 to-transparent" />
+                <p className="text-center text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed">
+                  Welcome to your personalized Land Rover experience. I&apos;m here to help you explore our legendary lineup of luxury SUVs, each designed to conquer any terrain while delivering unparalleled comfort and sophistication.
                 </p>
-                <p>
-                  The streamUI function allows you to stream React Server
-                  Components along with your language model generations to
-                  integrate dynamic user interfaces into your application.
-                </p>
-                <p>
-                  {" "}
-                  Learn more about the{" "}
-                  <Link
-                    className="text-blue-500 dark:text-blue-400"
-                    href="https://sdk.vercel.ai/docs/ai-sdk-rsc/streaming-react-components"
-                    target="_blank"
-                  >
-                    streamUI{" "}
-                  </Link>
-                  hook from Vercel AI SDK.
+                <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
+                  Ask me anything about our vehicles, schedule a test drive, or explore our current inventory.
                 </p>
               </div>
             </motion.div>

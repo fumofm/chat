@@ -5,8 +5,8 @@ import { AI } from "./actions";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://ai-sdk-preview-rsc-genui.vercel.dev"),
-  title: "Generative User Interfaces Preview",
-  description: "Generative UI with React Server Components and Vercel AI SDK",
+  title: "Land Rover Concierge",
+  description: "Explore the legendary Land Rover lineup with your personal concierge. Discover luxury SUVs built to conquer any terrain.",
 };
 
 export default function RootLayout({
